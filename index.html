@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Flor Especial para Asber - Feliz Cumpleaños</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fff3e8 0%, #ffe0f0 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Quicksand', 'Poppins', 'Dancing Script', cursive, sans-serif;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Contenedor principal: ahora con espacio para el texto arriba */
+        .wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 700px;
+            margin: 20px auto;
+        }
+
+        /* Contenedor del mensaje de cumpleaños (ARRIBA, completamente separado de la flor) */
+        .birthday-message-area {
+            text-align: center;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.8s ease-out, transform 0.6s ease-out;
+            width: 100%;
+            background: rgba(255, 245, 235, 0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 70px;
+            padding: 16px 24px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255, 200, 170, 0.6);
+        }
+
+        .birthday-message-area.show-message {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .main-message {
+            font-size: 2.3rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #d4451e, #ff7e5e);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            text-shadow: 2px 2px 12px rgba(255,140,100,0.3);
+            letter-spacing: 1px;
+        }
+
+        .sub-message {
+            font-size: 1.5rem;
+            margin-top: 8px;
+            color: #b9512e;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .sub-message span {
+            background: #fff0e0;
+            padding: 4px 14px;
+            border-radius: 60px;
+            font-size: 1.2rem;
+        }
+
+        /* Contenedor de la flor: más grande y protagonista */
+        .floral-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Canvas más grande: 600x600 para que la flor se vea más imponente */
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: radial-gradient(circle at 30% 25%, rgba(255, 248, 235, 0.9) 0%, #fff2e6 100%);
+            border-radius: 80px;
+            box-shadow: 0 30px 40px rgba(0,0,0,0.12), 0 0 0 10px rgba(255, 220, 180, 0.5);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        canvas:active {
+            transform: scale(0.98);
+        }
+
+        .credit {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #c27a62;
+            background: rgba(255, 248, 240, 0.8);
+            padding: 6px 20px;
+            border-radius: 50px;
+            backdrop-filter: blur(3px);
+            font-weight: 500;
+        }
+
+        .reset-note {
+            font-size: 0.7rem;
+            margin-top: 12px;
+            color: #cf9b86;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 650px) {
+            .main-message {
+                font-size: 1.6rem;
+            }
+            .sub-message {
+                font-size: 1.2rem;
+            }
+            .birthday-message-area {
+                padding: 12px 18px;
+            }
+            canvas {
+                max-width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <!-- Área del mensaje de cumpleaños totalmente arriba, no interfiere con el centro de la flor -->
+    <div id="birthdayMsgArea" class="birthday-message-area">
+        <div class="main-message">🎂 ¡Feliz cumpleaños, Asber! 🎂</div>
+        <div class="sub-message">
+            <span>💖 Te quiero mucho 💖</span>
+            <span>✨ Eres especial ✨</span>
+        </div>
+    </div>
+
+    <div class="floral-container">
+        <canvas id="flowerCanvas" width="600" height="600" style="width:100%; height:auto; max-width:600px; aspect-ratio:1/1"></canvas>
+        <div class="credit">🌸 Para ti, con todo mi cariño — cada pétalo florece por ti 🌸</div>
+        <div class="reset-note">💮 (Si quieres ver la magia otra vez, recarga la página) 💮</div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ----- FLOR MÁS GRANDE, CON MENSAJE SEPARADO FUERA DEL CANVAS -----
+        // La animación de antesis muestra cómo la flor se abre desde un capullo.
+        // Cuando termina la apertura, el mensaje de cumpleaños (que está fuera del canvas) aparece con una transición suave.
+        // De esta manera, el centro de la flor queda completamente visible sin texto encima.
+
+        const canvas = document.getElementById('flowerCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Dimensiones más grandes: 600x600 para una flor más imponente
+        const size = 600;
+        canvas.width = size;
+        canvas.height = size;
+        
+        const centerX = size / 2;   // 300
+        const centerY = size / 2;   // 300
+        
+        // Variables de animación
+        let progress = 0;            // 0 = capullo cerrado, 1 = flor totalmente abierta
+        let animationId = null;
+        let animationStarted = false;
+        let completionFlag = false;   // indica si ya terminó la apertura
+        
+        // Duración de la animación (3 segundos para apreciar mejor la antesis)
+        const ANIMATION_DURATION = 3200; // ms
+        let startTimestamp = null;
+        
+        // Referencia al div del mensaje externo
+        const msgContainer = document.getElementById('birthdayMsgArea');
+        
+        // ---- Parámetros de la flor (ajustados para mayor tamaño) ----
+        // pétalos más largos y anchos, proporcionales al nuevo canvas de 600px.
+        
+        // Función para dibujar un pétalo (escala aumentada)
+        function drawPetal(angle, petalProgress, globalProgress) {
+            // Longitud máxima del pétalo: ~185px (antes 145px) -> flor mucho más grande
+            const maxLength = 188;
+            const maxWidth = 92;
+            
+            // Easing para apertura orgánica
+            const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+            const openFactor = easeOut(petalProgress);
+            
+            let length = maxLength * openFactor;
+            if (length < 18) length = 18;   // mínimo visible en capullo
+            let width = maxWidth * (0.3 + openFactor * 0.7);
+            
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(angle);
+            
+            // Desplazamiento radial: hace que los pétalos se separen del centro a medida que abren
+            const radialOffset = 28 * openFactor + 12;
+            
+            ctx.beginPath();
+            const halfW = width / 2;
+            const tipX = length;
+            const baseX = radialOffset;
+            
+            // Puntos de control para forma de pétalo redondeado y elegante
+            const cp1x = baseX + length * 0.42;
+            const cp1y = halfW * 0.85;
+            const cp2x = baseX + length * 0.42;
+            const cp2y = -halfW * 0.85;
+            const tipY = 0;
+            
+            ctx.moveTo(baseX, 0);
+            ctx.quadraticCurveTo(cp1x, cp1y, tipX, tipY);
+            ctx.quadraticCurveTo(cp2x, cp2y, baseX, 0);
+            
+            // Degradado de pétalo según apertura: tonos rosados, coral
+            const gradient = ctx.createLinearGradient(baseX, -halfW, tipX, tipY);
+            if (openFactor < 0.3) {
+                gradient.addColorStop(0, '#fbc4d0');
+                gradient.addColorStop(1, '#ff99ae');
+            } else {
+                gradient.addColorStop(0, '#ffb7cc');
+                gradient.addColorStop(0.5, '#ff6b8f');
+                gradient.addColorStop(1, '#ff4d6a');
+            }
+            ctx.fillStyle = gradient;
+            ctx.shadowColor = "rgba(0,0,0,0.08)";
+            ctx.shadowBlur = 4;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#ffb7c5';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.restore();
+        }
+        
+        // Dibujar sépalos verdes más frondosos (base de la flor)
+        function drawSepals(progressGlobal) {
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                ctx.save();
+                ctx.rotate(angle);
+                ctx.beginPath();
+                const spreadBase = 24 + progressGlobal * 8;
+                ctx.moveTo(14, -6);
+                ctx.quadraticCurveTo(32, -18, 42, 0);
+                ctx.quadraticCurveTo(32, 18, 14, 6);
+                ctx.fillStyle = '#6e9f2e';
+                ctx.fill();
+                ctx.fillStyle = '#487a1a';
+                ctx.beginPath();
+                ctx.moveTo(14, -3);
+                ctx.quadraticCurveTo(26, -12, 34, 0);
+                ctx.quadraticCurveTo(26, 12, 14, 3);
+                ctx.fill();
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+        
+        // Centro de la flor (sin texto, solo el disco y el estilo)
+        function drawCenter(globalProgress, isFullyOpen) {
+            // El centro crece ligeramente con la flor, pero sigue siendo proporcionado
+            const radius = 46 + globalProgress * 10;
+            ctx.save();
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = "rgba(0,0,0,0.15)";
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            const grad = ctx.createRadialGradient(centerX-8, centerY-8, 12, centerX, centerY, radius);
+            grad.addColorStop(0, '#fae669');
+            grad.addColorStop(1, '#f3b33d');
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius-10, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffab2e';
+            ctx.fill();
+            
+            // Detalle de puntos (estilo semillas)
+            ctx.fillStyle = '#c97d2b';
+            for(let i=0; i<55; i++) {
+                const ang = (i / 55) * Math.PI * 2;
+                const rad = radius - 12;
+                const x = centerX + Math.cos(ang) * (rad * 0.75);
+                const y = centerY + Math.sin(ang) * (rad * 0.75);
+                ctx.beginPath();
+                ctx.arc(x, y, 2.3, 0, Math.PI*2);
+                ctx.fill();
+            }
+            
+            // Pequeños estambres decorativos
+            for(let s=0;s<24;s++) {
+                const angleStam = (s / 24) * Math.PI * 2;
+                const radStam = radius - 4;
+                const x = centerX + Math.cos(angleStam) * radStam;
+                const y = centerY + Math.sin(angleStam) * radStam;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + Math.cos(angleStam)*8, y + Math.sin(angleStam)*8);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ffbc6e';
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(x + Math.cos(angleStam)*8, y + Math.sin(angleStam)*8, 2, 0, Math.PI*2);
+                ctx.fillStyle = '#f5a442';
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+        
+        // Hojas y tallos más grandes para acompañar la flor
+        function drawStemAndLeaves() {
+            ctx.save();
+            // Tallo central sutil
+            ctx.beginPath();
+            ctx.moveTo(centerX-8, centerY+42);
+            ctx.quadraticCurveTo(centerX-20, centerY+120, centerX-12, centerY+190);
+            ctx.lineTo(centerX+12, centerY+188);
+            ctx.quadraticCurveTo(centerX+18, centerY+118, centerX+10, centerY+44);
+            ctx.fillStyle = '#87b13a';
+            ctx.fill();
+            // Hojas laterales grandes
+            ctx.beginPath();
+            ctx.moveTo(centerX-25, centerY+70);
+            ctx.quadraticCurveTo(centerX-62, centerY+130, centerX-45, centerY+200);
+            ctx.lineTo(centerX-12, centerY+170);
+            ctx.quadraticCurveTo(centerX-15, centerY+120, centerX-25, centerY+75);
+            ctx.fillStyle = '#9bc45a';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(centerX+30, centerY+65);
+            ctx.quadraticCurveTo(centerX+75, centerY+120, centerX+68, centerY+195);
+            ctx.lineTo(centerX+32, centerY+173);
+            ctx.quadraticCurveTo(centerX+40, centerY+118, centerX+30, centerY+70);
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        // Flor principal + todos los elementos visuales
+        function drawFlower(progressValue) {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, size, size);
+            
+            // Fondo suave degradado con aura
+            const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+            bgGrad.addColorStop(0, '#fffbf0');
+            bgGrad.addColorStop(1, '#ffefe2');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Elementos verdes (tallo + hojas)
+            drawStemAndLeaves();
+            
+            // Sépalos verdes en la base
+            drawSepals(progressValue);
+            
+            // Pétalos principales (14 pétalos para mayor plenitud)
+            const petalCount = 14;
+            for (let i = 0; i < petalCount; i++) {
+                const angle = (i / petalCount) * Math.PI * 2;
+                // Suave variación orgánica de apertura por pétalo (máx 5% diferencia)
+                let offset = Math.sin(angle * 1.8) * 0.04;
+                let finalProgress = progressValue + offset;
+                finalProgress = Math.min(1, Math.max(0, finalProgress));
+                drawPetal(angle, finalProgress, progressValue);
+            }
+            
+            // Segunda capa de pétalos internos (más pequeños) para dar volumen
+            for (let i = 0; i < 10; i++) {
+                const angle = (i / 10) * Math.PI * 2 + 0.35;
+                let innerPetalProgress = Math.min(1, progressValue * 1.05);
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(angle);
+                const lenInside = 78 * (0.5 + innerPetalProgress * 0.6);
+                const widInside = 35 * (0.5 + innerPetalProgress * 0.6);
+                ctx.beginPath();
+                ctx.moveTo(22, 0);
+                ctx.quadraticCurveTo(40, -widInside*0.75, 22+lenInside*0.7, 0);
+                ctx.quadraticCurveTo(40, widInside*0.75, 22, 0);
+                ctx.fillStyle = `rgba(255, 110, 100, ${0.75 + innerPetalProgress*0.25})`;
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            // Centro de la flor (limpio, sin texto)
+            const isFully = (progressValue >= 0.99);
+            drawCenter(progressValue, isFully);
+            
+            // Detalles de partículas de polen y brillos cuando está casi abierta
+            if (progressValue > 0.65) {
+                for(let p=0;p<26;p++) {
+                    ctx.fillStyle = `rgba(255, 210, 90, ${0.5+Math.sin(Date.now()*0.004+p)*0.2})`;
+                    ctx.beginPath();
+                    let anglePollen = (Date.now()*0.0035 + p) % (Math.PI*2);
+                    let radPol = 130 + Math.sin(Date.now()*0.007 + p)*8;
+                    let xOff = centerX + Math.cos(anglePollen + p) * radPol * (0.65 + progressValue*0.4);
+                    let yOff = centerY + Math.sin(anglePollen + p) * radPol * (0.65 + progressValue*0.4);
+                    ctx.arc(xOff, yOff, 2.8, 0, Math.PI*2);
+                    ctx.fill();
+                }
+            }
+            
+            // Pequeñas estrellitas fugaces en los pétalos cuando está completa (sin tapar centro)
+            if (progressValue >= 0.98) {
+                for(let star=0; star<16; star++) {
+                    const angleStar = (Date.now() / 480 + star) % (Math.PI*2);
+                    const radStar = 150 + Math.sin(angleStar*2)*12;
+                    const xS = centerX + Math.cos(angleStar + star) * radStar;
+                    const yS = centerY + Math.sin(angleStar + star) * radStar;
+                    ctx.fillStyle = `rgba(255, 220, 120, 0.9)`;
+                    ctx.font = "22px 'Segoe UI'";
+                    ctx.fillText("✨", xS, yS);
+                }
+            }
+        }
+        
+        // ----- Función de animación de apertura de la flor (antesis) -----
+        function animateAnthesis(timestamp) {
+            if (!animationStarted) return;
+            if (startTimestamp === null) {
+                startTimestamp = timestamp;
+            }
+            const elapsed = timestamp - startTimestamp;
+            let rawProgress = Math.min(1, elapsed / ANIMATION_DURATION);
+            // Easing cúbico para apertura suave y gradual
+            const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
+            progress = easeOutCubic(rawProgress);
+            
+            drawFlower(progress);
+            
+            // Verificar si ya completó la apertura
+            if (rawProgress >= 1.0 && !completionFlag) {
+                completionFlag = true;
+                progress = 1.0;
+                drawFlower(1.0);
+                
+                // Mostrar el mensaje de cumpleaños (ARRIBA, fuera del canvas) con una animación hermosa
+                if (msgContainer) {
+                    msgContainer.classList.add('show-message');
+                    // Además agregar un destello ligero a todo el canvas
+                    canvas.style.transition = "box-shadow 0.4s";
+                    canvas.style.boxShadow = "0 0 0 6px #ffc89c, 0 30px 45px rgba(0,0,0,0.2)";
+                    setTimeout(() => {
+                        if(canvas) canvas.style.boxShadow = "0 30px 40px rgba(0,0,0,0.12), 0 0 0 10px rgba(255, 220, 180, 0.5)";
+                    }, 800);
+                }
+                
+                // Finalizar animación
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+                return;
+            }
+            
+            if (rawProgress < 1.0) {
+                animationId = requestAnimationFrame(animateAnthesis);
+            } else {
+                if (!completionFlag) {
+                    completionFlag = true;
+                    drawFlower(1.0);
+                    if (msgContainer) msgContainer.classList.add('show-message');
+                }
+                if (animationId) cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+        
+        // Iniciar el florecimiento
+        function startBloom() {
+            if (animationStarted) return;
+            animationStarted = true;
+            completionFlag = false;
+            progress = 0;
+            startTimestamp = null;
+            // Aseguramos que el mensaje no sea visible al inicio
+            if (msgContainer) msgContainer.classList.remove('show-message');
+            // Dibujar estado inicial (capullo cerrado)
+            drawFlower(0);
+            // Pequeña pausa para efecto dramático y luego animar
+            setTimeout(() => {
+                startTimestamp = null;
+                animationId = requestAnimationFrame(animateAnthesis);
+            }, 100);
+        }
+        
+        window.addEventListener('load', () => {
+            startBloom();
+            // Doble click o toque largo para reiniciar la magia (recarga)
+            canvas.addEventListener('dblclick', () => {
+                window.location.reload();
+            });
+            // También para móviles: doble tap simula recarga si se desea
+            let touchTimer = null;
+            canvas.addEventListener('touchend', (e) => {
+                if (touchTimer) clearTimeout(touchTimer);
+                touchTimer = setTimeout(() => {}, 200);
+                // Si se hace doble toque rápido, recargar
+            });
+            let lastTap = 0;
+            canvas.addEventListener('touchstart', (e) => {
+                const now = Date.now();
+                if (now - lastTap < 300) {
+                    window.location.reload();
+                }
+                lastTap = now;
+            });
+        });
+        
+        // Redibujar si la ventana cambia de tamaño manteniendo el progreso actual
+        window.addEventListener('resize', () => {
+            if (!completionFlag && progress !== undefined) {
+                drawFlower(progress);
+            } else if (completionFlag) {
+                drawFlower(1.0);
+                if (msgContainer && !msgContainer.classList.contains('show-message')) {
+                    msgContainer.classList.add('show-message');
+                }
+            } else {
+                drawFlower(0);
+            }
+        });
+    })();
+</script>
+</body>
+</html>
